@@ -7,7 +7,7 @@ host-side descriptor/CRC checks, compares with the Rust (embassy-usb) and Zig (M
 (never runs) the flash commands. Everything is pinned and kept inside this folder: no sudo, no system packages.
 Repository name: `tinyusb_toolbox`.
 
-Status: **ready** (doctor 49 ok, examples 18/18, templates 16/16 built by the smoke test, 2026-10-29). Using real hardware needs udev
+Status: **ready** (doctor 50 ok, examples 18/18, templates 16/16 built by the smoke test, 2026-10-29). Using real hardware needs udev
 rules (your action, see "Limitations"). Launcher: `./tinyusb-box`.
 
 ## What's included
@@ -21,6 +21,7 @@ rules (your action, see "Limitations"). Launcher: `./tinyusb-box`.
 | pico-sdk | 2.3.1 (2026-09-04) | TinyUSB comes from this ID's tree via `PICO_TINYUSB_PATH` |
 | picotool, pioasm | 2.3.1 (prebuilt, pico-sdk-tools v2.3.1-0) | found via `picotool_DIR`; the SDK never builds them |
 | arm-none-eabi-gcc | xPack 14.2.1-1.1 | GCC 14.2.1 + newlib/nano; the toolchain TinyUSB 0.21 CI uses; 1007 MB |
+| Bend | 2.0.39 | pins group `bend` (installed by `install`), sha256 = GitHub release asset digest; only for `bend_usb_crc`; 80 MB |
 | Ceedling (+ Unity 2.6.1, CMock 2.6.0) | gem 1.0.1 | in `cache/gems` (`GEM_HOME`) |
 | CMake, Ninja, make, Python, Ruby, host GCC | 4.4.4, 1.13.2, 4.4, 3.12, 3.4.2, 15.3 | conda-forge via pixi (`pixi.lock`) |
 | pixi | 0.81.0 | sha256 pinned in the launcher |
@@ -60,6 +61,7 @@ Global option: `--dry-run` / `-n` prints what a command would do. Exit codes: 0 
 | `list` | read-only: attached USB devices that matter here (TinyUSB 0xcafe, Pico BOOTSEL, STM32 DFU, CMSIS-DAP / ST-Link probes) | `./tinyusb-box list` |
 | `plan <board> <fw.elf\|.uf2\|.bin>` | PRINT the flash commands (picotool, UF2 copy, dfu-util, openocd, probe-rs) for the boards in `boards`; runs nothing | `./tinyusb-box plan stm32f411blackpill fw.elf` |
 | `udev` | print the udev rules file path and the sudo commands to install it | `./tinyusb-box udev` |
+| `bend <args>` | the pinned Bend 2.0.39 (HOME/TMPDIR in `cache/`, `BEND_NO_TELEMETRY=1`; `update`, `login`, `link`, `--publish` refused) | `./tinyusb-box bend PROOF.bend` |
 | `test [--all]` | `tests/test_smoke.sh`; `--all` adds the dry-run test and the examples test | `./tinyusb-box test` |
 | `new <kind> <name> [--dir D] [--force]` | create a project from `templates/` (16 kinds, see below) | `./tinyusb-box new device_cdc my_usb` |
 | `examples list \| run <ex> [args] \| build [ex...] \| test [ex...]` | list, run, build or test the examples | `./tinyusb-box examples test` |
@@ -94,7 +96,7 @@ artifacts (fits flash, USB task linked, VID 0xCafe in the image, entry point in 
 | `host_unit_tests` | host | TinyUSB `test/unit-test` via Ceedling 1.0.1 | 61 tests, 0 failed |
 | `rust_cdc_compare` | Pico | embassy-usb CDC (32_17's `usb_cdc_app`) vs TinyUSB `cdc_dual_ports` | size table (22.6 KB vs 24.3 KB flash), entry/IRQ symbols |
 | `zig_usb_cdc` | Pico | MicroZig's own USB stack, CDC echo (via 32_24) | UF2 header, UTF-16 string descriptors in the image (4.4 KB flash) |
-| `bend_usb_crc` | host | Bend 2 laws + proofs (via 32_31): PIO-USB's CRC-16 table = bitwise CRC for all 256 bytes, check value, streaming law | `check` + `--verdict`; a table with one wrong entry is rejected |
+| `bend_usb_crc` | host | Bend 2 laws + proofs (Bend pinned in this ID): PIO-USB's CRC-16 table = bitwise CRC for all 256 bytes, check value, streaming law | `bend PROOF.bend` = ALL PROOFS CHECK; a table with one wrong entry is rejected |
 
 `descriptor_lint` also lints your own firmware: `./tinyusb-box examples run descriptor_lint <dir with usb_descriptors.c and tusb_config.h>`.
 
@@ -123,9 +125,10 @@ kept), product string = name, CMake through `TINYUSB_DIR`; configure with `-DBOA
 
 **Other languages.** Rust: `rust_cdc_compare`, template `rust_usb_hid` (32_17_embedded_rust via `$BOX_EMBEDDED_RUST`).
 Zig: `zig_usb_cdc` example + template (32_24_microzig via `$BOX_MICROZIG`; run in a clean environment so this ID's
-conda compiler flags do not reach zig's native build steps). Bend: `bend_usb_crc`, host-side proofs only (32_31_bend
-via `$BOX_BEND`; no MCU support claimed). Each skips with exit 3 when its sibling ID is missing (`examples test` then
-lists it as FAIL: boxtool counts skips as failures).
+conda compiler flags do not reach zig's native build steps). Bend: `bend_usb_crc`, host-side proofs only, with Bend 2.0.39
+pinned in this ID (`config/pins.tsv` group `bend`, installed by `install`, run by `./tinyusb-box bend`; Bend has no MCU
+target). No Bend template: the example is the pattern. The Rust and Zig parts skip with exit 3 when the sibling ID is
+missing (`examples test` then lists them as FAIL: boxtool counts skips as failures).
 
 **Not used:** Linux `dummy_hcd` / USB/IP (loading the modules needs root), so nothing enumerates on this PC; ESP32-S3
 needs ESP-IDF (TinyUSB's espressif family uses its own build), not part of this ID.
@@ -154,7 +157,7 @@ Pins: `config/pins.tsv`; `update` never edits them.
 | What | Where |
 |---|---|
 | Source, launcher, examples, template | this ID |
-| Tools | `install/` (1.3 GB: Arm GCC 1.0 GB, TinyUSB 26 MB, CMSIS_5 138 MB, pico-sdk 30 MB, picotool/pioasm), `.pixi/` (1.1 GB), `.bin/` (pinned pixi) |
+| Tools | `install/` (1.7 GB: Arm GCC 1.0 GB, CMSIS_5 138 MB, Bend 80 MB, ST/nRF deps, TinyUSB 26 MB, pico-sdk 30 MB, picotool/pioasm), `.pixi/` (1.1 GB), `.bin/` (pinned pixi) |
 | Cache | `cache/` (1.5 GB: downloads 321 MB, pixi packages hard-linked with `.pixi`, gems 18 MB) |
 | Build output and logs | `$BOX_V3/30_39_tools/32_embedded/32_21_tinyusb/{build,log}` (45 MB; `build/examples/<ex>/<board>/`) |
 | udev rules file | `config/99-tinyusb-box.rules` (not installed) |
@@ -179,8 +182,8 @@ tests/test_smoke.sh              # tools run, every template built for its board
 tests/test_dry_run.sh            # every command in --dry-run + shellcheck
 ```
 
-Last known (2026-10-29): doctor 49 ok / 0 failed; `examples test` 18/18; `test_smoke.sh` 35/35 (every template
-built for its boards, incl. Rust and Zig); `test_dry_run.sh` 35/35.
+Last known (2026-10-29): doctor 50 ok / 0 failed; `examples test` 18/18; `test_smoke.sh` 35/35 (every template
+built for its boards, incl. Rust and Zig); `test_dry_run.sh` 38/38.
 
 ## Troubleshooting
 
@@ -225,4 +228,4 @@ Each script has a `[scripts.*]` descriptor in `.box.toml` (`box scripts show 32_
 - xPack GCC: <https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/tag/v14.2.1-1.1>; Ceedling 1.0.1: <https://rubygems.org/gems/ceedling/versions/1.0.1>
 - Dependency pinning and rationale: `docs/research.md`.
 - History: `NOTES.md`. Reports: `$BOX/00_09_meta/02_logs/2026_10_25_embedded_tools2_report.md`.
-- Sibling tools: `32_17_embedded_rust`, `32_24_microzig`, `32_31_bend` (comparison/proof examples), `32_15_flashers` (picotool, dfu-util, esptool), `32_18_rtos` (also uses an Arm GCC), `32_20_testing` (Ceedling 1.2.1).
+- Sibling tools: `32_17_embedded_rust`, `32_24_microzig` (comparison examples), `32_15_flashers` (picotool, dfu-util, esptool), `32_18_rtos` (also uses an Arm GCC), `32_20_testing` (Ceedling 1.2.1).

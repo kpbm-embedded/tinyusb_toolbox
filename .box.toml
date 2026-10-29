@@ -24,7 +24,7 @@ kind = "launcher"
 path = "tinyusb-box"
 summary = "self-contained TinyUSB USB stack + pinned Arm GCC, ST/CMSIS deps, pico-sdk and picotool."
 interpreter = "sh"
-commands = ["help", "where", "bootstrap", "install", "update", "clean", "status", "doctor", "shell", "run", "test", "new", "examples", "native", "relocate", "pack", "boards", "build", "unit-test", "list", "plan", "udev"]
+commands = ["help", "where", "bootstrap", "install", "update", "clean", "status", "doctor", "shell", "run", "test", "new", "examples", "native", "relocate", "pack", "boards", "build", "unit-test", "list", "plan", "udev", "bend"]
 flags = ["--all", "--check", "--dir", "--dry-run", "--env", "--force", "--help", "--no-demos", "--out", "--print", "--with-cache", "--yes"]
 reads = { global = ["BOXT_DRY_RUN"] }
 dry_run_flag = "--dry-run"

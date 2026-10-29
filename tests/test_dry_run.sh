@@ -47,6 +47,9 @@ check ex-build    'example\.sh build'                      "$B" --dry-run exampl
 check ex-test     'example\.sh test'                       "$B" --dry-run examples test
 check native      'picotool install/picotool'              "$B" --dry-run native
 check relocate    'pixi env already matches|re-creating'   "$B" --dry-run relocate
+check bend        'BEND_NO_TELEMETRY=1 .*install/bend/bin/bend PROOF\.bend' "$B" --dry-run bend PROOF.bend
+check bend-update 'disabled here'                         bash -c "'$B' bend update 2>&1; true"
+check bend-publish 'disabled here'                        bash -c "'$B' bend x.bend --publish 2>&1; true"
 check pack        '\+ tar .*-cf .*tinyusb-box_'            "$B" --dry-run pack
 check boards      'stm32f411blackpill'                     "$B" boards
 check build       '\+ cmake -S .*examples/device/cdc_msc .*-DBOARD=raspberry_pi_pico' "$B" --dry-run build device/cdc_msc raspberry_pi_pico

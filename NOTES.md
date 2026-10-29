@@ -53,9 +53,12 @@
   header and searches UTF-16. Zig packages need a name-bound fingerprint: the template keeps the package name fixed.
 - Rust: embassy-usb CDC 22.6 KB flash vs TinyUSB cdc_dual_ports 24.3 KB on the Pico; Zig (MicroZig, polled) 4.4 KB.
 - Bend: proofs that Pico-PIO-USB's CRC-16 table equals the bitwise CRC (generated from its usb_crc.c), check value,
-  streaming law; `--verdict` passes, a table with one wrong entry is rejected. Linear args needed `+`; lists are not
+  streaming law; a table with one wrong entry is rejected. First written against the shared Bend ID; after the user's
+  final rule (no shared Bend toolchain) Bend 2.0.39 is pinned here (group `bend`, release asset digests) and run by
+  `./tinyusb-box bend` (HOME/TMPDIR in cache/, no telemetry, update/login/link/--publish refused). `--verdict` (Lean
+  4.34.0, ~580 MB) is not pinned: the normal proof check is enough for this example. Linear args needed `+`; lists are not
   Data, so the table check walks the list instead of indexing it. My first draft (guessed syntax) went to the Trash.
 - Mistake: the template generator wrote a `.boards` file into each template (copied by `new`); moved to the Trash
   (logged), the board list lives in tests/test_smoke.sh.
 - dummy_hcd / USB/IP not used (root needed). Hardware not tested: enumeration, flashing, PIO-USB timing.
-- Results: doctor 49 ok / 0 failed; examples test 18/18; test_smoke.sh 35/35; test_dry_run.sh 35/35.
+- Results: doctor 50 ok / 0 failed; examples test 18/18; test_smoke.sh 35/35; test_dry_run.sh 38/38.

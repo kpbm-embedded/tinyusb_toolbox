@@ -14,7 +14,9 @@ TOOL_HELP_USE="  boards                  the boards the examples build for (+ ev
   list                    read-only: USB devices now attached that matter here (TinyUSB 0xcafe, Pico BOOTSEL,
                           STM32 DFU, CMSIS-DAP/ST-Link probes)
   plan <board> <fw.elf|.uf2|.bin>   PRINT the flash commands (picotool/dfu-util/openocd); runs nothing
-  udev                    print the udev rules file path + the sudo commands to install it"
+  udev                    print the udev rules file path + the sudo commands to install it
+  bend <args>             the pinned Bend 2.0.39 (install group bend; HOME/TMPDIR in cache/, no telemetry;
+                          update/login/link/--publish refused), e.g. bend PROOF.bend"
 hook_help() { # printed after boxtool's help: tool-specific examples and environment
   cat <<EOF
 
@@ -88,6 +90,8 @@ install_ceedling() {
 hook_install() { # demos-flag
   activate
   install_ceedling
+  info "Bend for examples/bend_usb_crc (pins group bend)"
+  install_group bend
   info "building the example firmware (examples build)"
   cmd_examples build
 }
@@ -114,6 +118,7 @@ hook_doctor() {
   v=$(ninja --version 2>/dev/null) && d_ok "ninja $v" || d_fail "ninja missing"
   v=$(ruby --version 2>/dev/null | cut -d' ' -f1-2) && d_ok "$v (env)" || d_fail "ruby missing in the env"
   if [[ -x "$GEMS/bin/ceedling" ]]; then d_ok "ceedling $CEEDLING_VERSION (cache/gems)"; else d_warn "ceedling not installed (./$NAME install)"; fi
+  if [[ -x "$INST/bend/bin/bend" ]]; then d_ok "bend $(pin_ver bend) (install/bend, for bend_usb_crc)"; else d_warn "bend not installed (./$NAME install): bend_usb_crc fails"; fi
   [[ -r "$ROOT/config/99-tinyusb-box.rules" ]] && d_ok "udev rules file in config/ (install by hand: ./$NAME udev)" || d_warn "udev rules file missing"
 }
 
@@ -232,6 +237,20 @@ tool_cmd_plan() {
     *) usage_error "unknown board $b (stm32f411blackpill | raspberry_pi_pico | raspberry_pi_pico2 | feather_nrf52840_express | stm32g474nucleo | stm32h743_weact | stm32h563nucleo)" ;;
   esac
   echo "# then: ./$NAME list   (the example enumerates as cafe:4xxx)"
+}
+
+# bend <args>: the pinned Bend with everything it writes kept in cache/ (HOME: ~/.bend/check.json, hub
+# packages; TMPDIR), no daily version ping; commands that self-update or publish are refused.
+tool_cmd_bend() {
+  local a real="$INST/bend/bin/bend"
+  case "${1:-}" in
+    update|login|link) usage_error "bend $1 is disabled here (self-update / BendHub account); change config/pins.tsv instead" ;;
+  esac
+  for a in "$@"; do [[ "$a" = --publish* ]] && usage_error "bend --publish is disabled here (public, permanent upload)"; done
+  if [[ "$DRY" = 1 ]]; then printf '+ HOME=%s TMPDIR=%s BEND_NO_TELEMETRY=1 %s' "$ROOT/cache/bend-home" "$ROOT/cache/tmp" "$real"; printf ' %q' "$@"; echo; return 0; fi
+  [[ -x "$real" ]] || not_applicable "Bend is not installed: ./$NAME install (pins group bend)"
+  mkdir -p "$ROOT/cache/bend-home" "$ROOT/cache/tmp"
+  HOME="$ROOT/cache/bend-home" BEND_LIB="$ROOT/cache/bend-home/.bend/lib" TMPDIR="$ROOT/cache/tmp" BEND_NO_TELEMETRY=1 exec "$real" "$@"
 }
 
 tool_cmd_udev() {
