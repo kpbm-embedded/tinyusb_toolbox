@@ -1,0 +1,13 @@
+.{
+    .name = .zig_usb_cdc_app,
+    .fingerprint = 0x9714e5ad3441ea5f,
+    .version = "0.0.0",
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{
+        .microzig = .{
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/releases/download/0.17.25/microzig.tar.gz",
+            .hash = "microzig-0.17.25-D20YSUTHAACjcVFqI8IT3xyx5LLfSpzwCGFnB2nK6Gpx",
+        },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "src" },
+}

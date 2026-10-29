@@ -1,0 +1,32 @@
+id = "32_21"
+name = "tinyusb"
+kind = "tool"
+status = "active"
+tags = ["embedded"]
+
+[backup]
+tier = "critical"
+
+[tool]
+name = "tinyusb"
+launcher = "tinyusb-box"
+aliases = ["tinyusb-box"]
+env_var = "BOX_TINYUSB"
+env_path = "."
+native = "native/native.zsh"
+native_provides = ["arm-none-eabi-gcc", "arm-none-eabi-objcopy", "arm-none-eabi-size", "picotool", "tinyusb-build", "tinyusb-plan"]
+native_off_compat = ["TINYUSB_BOX_NATIVE_OFF"]
+network = ["bootstrap", "install", "update"]
+
+[scripts.tinyusb-box]
+schema = 1
+kind = "launcher"
+path = "tinyusb-box"
+summary = "self-contained TinyUSB USB stack + pinned Arm GCC, ST/CMSIS deps, pico-sdk and picotool."
+interpreter = "sh"
+commands = ["help", "where", "bootstrap", "install", "update", "clean", "status", "doctor", "shell", "run", "test", "new", "examples", "native", "relocate", "pack", "boards", "build", "unit-test", "list", "plan", "udev"]
+flags = ["--all", "--check", "--dir", "--dry-run", "--env", "--force", "--help", "--no-demos", "--out", "--print", "--with-cache", "--yes"]
+reads = { global = ["BOXT_DRY_RUN"] }
+dry_run_flag = "--dry-run"
+apply_flag = { clean = "--yes" }
+scope = "global"

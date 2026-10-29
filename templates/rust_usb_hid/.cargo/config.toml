@@ -1,0 +1,11 @@
+# Cross build for the board; flip-link (in-ID, pinned) wraps rust-lld for zero-cost stack
+# overflow protection. No runner on purpose: `cargo run` would flash a board. Use
+# ./rust-box plan <board> <elf> to see the flash command.
+[build]
+target = "thumbv6m-none-eabi"
+
+[target.thumbv6m-none-eabi]
+linker = "flip-link"
+
+[env]
+DEFMT_LOG = "debug"

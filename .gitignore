@@ -1,0 +1,19 @@
+# tinyusb-box: only sources go into git. Everything below is downloaded, solved or produced again by
+# ./tinyusb-box bootstrap | install | examples test (pins: config/pins.tsv, pixi.toml + pixi.lock, pixi sha256 in tinyusb-box).
+/.bin/
+/.pixi/
+/cache
+/install/
+/native/
+/build/
+/log/
+/config/local.env
+*.tar.zst
+*.tar.gz
+__pycache__/
+*.pyc
+# outputs if an example or template is built inside the folder by hand
+build-*/
+zig-out/
+.zig-cache/
+target/

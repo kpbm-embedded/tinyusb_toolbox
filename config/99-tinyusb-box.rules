@@ -1,0 +1,11 @@
+# 99-tinyusb-box.rules (32_21_tinyusb): access for the plugdev/uucp group without root.
+# Install by hand (tinyusb-box udev prints the commands):
+#   sudo cp 99-tinyusb-box.rules /etc/udev/rules.d/ && sudo udevadm control --reload-rules && sudo udevadm trigger
+# TinyUSB example firmware (VID 0xcafe): raw USB (WebUSB, vendor), hidraw; keep ModemManager off the CDC ports
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="cafe", MODE="0660", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"
+KERNEL=="hidraw*", ATTRS{idVendor}=="cafe", MODE="0660", TAG+="uaccess"
+# Raspberry Pi RP2040 / RP2350 BOOTSEL (picotool)
+SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="0003", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000f", MODE="0660", TAG+="uaccess"
+# STM32 ROM DFU bootloader (dfu-util)
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="df11", MODE="0660", TAG+="uaccess"

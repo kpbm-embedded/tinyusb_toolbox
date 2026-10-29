@@ -1,0 +1,90 @@
+#!/bin/sh
+# tinyusb-box: self-contained TinyUSB USB stack + pinned Arm GCC, ST/CMSIS deps, pico-sdk and picotool.
+# Usage: ./tinyusb-box [--dry-run|-n] <command> [args]   (./tinyusb-box help lists every command)
+# Bootstraps the pinned pixi into ./.bin (sha256 checked against pixi_sha256 below), keeps every
+# cache inside ./cache, then hands over to lib/tinyusb.bash (which sources lib/boxtool.bash).
+# Named tinyusb-box so it never shadows the tool's own CLI. Needs sh, bash, curl or wget, tar (unzip on Windows).
+# Exit codes: 0 ok, 1 failure, 2 usage error, 3 not applicable (set by lib/boxtool.bash).
+set -eu
+ROOT=$(cd -P "$(dirname "$0")" && pwd -P)
+export BOXT_ROOT="$ROOT" BOXT_NAME=tinyusb-box
+PIXI_VERSION=v0.81.0   # bump together with the checksums in pixi_sha256
+export PIXI_HOME="$ROOT/cache/pixi-home"
+export PIXI_CACHE_DIR="$ROOT/cache/pixi"
+export RATTLER_CACHE_DIR="$ROOT/cache/pixi"
+export PIXI_NO_UPDATE_NOTIFICATION=1
+export BOXT_PIXI="$ROOT/.bin/pixi"
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) BOXT_PIXI="$ROOT/.bin/pixi.exe" ;; esac
+
+pixi_sha256() { # target triple -> pinned sha256 of the pixi release archive (empty if not pinned)
+  case "$1" in
+    x86_64-unknown-linux-musl)  echo 7aa3ec39aecceff9062fa2ed4d42cbaa0bdc25ddea727d048e061cf188d434f6 ;;
+    aarch64-unknown-linux-musl) echo 9f8d2113fe9dc01788a65f5c2acec34fa56b1193461a5c3e9a775d6d2d621bcb ;;
+    x86_64-apple-darwin)        echo 9859588ba57f390b5c77d56b2654fab37bc00e10952da25e3efd6e3434557e5a ;;
+    aarch64-apple-darwin)       echo f4e32ea91970d4e11739488817979a5f2c6ebbb9cedb0d6dea74b2b790b272dc ;;
+    x86_64-pc-windows-msvc)     echo 1fc82219c96d539e6a856bd1bb2643ec9e1753f5b3af61b0c3158921aca89de3 ;;
+    *) echo "" ;;
+  esac
+}
+
+sha256_of() { # file -> hex digest
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1
+  else shasum -a 256 "$1" | cut -d' ' -f1; fi
+}
+
+host_triple() { # pixi release triple for this machine (return 1 if unsupported)
+  case "$(uname -s)" in
+    Linux) host_os=unknown-linux-musl ;;
+    Darwin) host_os=apple-darwin ;;
+    MINGW*|MSYS*|CYGWIN*) host_os=pc-windows-msvc ;;
+    *) echo "tinyusb-box: unsupported OS $(uname -s) (Windows: run from Git Bash/MSYS2, see README)" >&2; return 3 ;;   # 3 = not applicable here (fan-out: skip)
+  esac
+  case "$(uname -m)" in
+    x86_64|amd64) host_arch=x86_64 ;;
+    aarch64|arm64) host_arch=aarch64 ;;
+    *) echo "tinyusb-box: unsupported CPU $(uname -m)" >&2; return 1 ;;
+  esac
+  echo "$host_arch-$host_os"
+}
+
+download() { # url file
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL --retry 3 --connect-timeout 30 --max-time 600 -o "$2" "$1"
+  else
+    wget -q --tries=3 --timeout=60 -O "$2" "$1"
+  fi
+}
+
+bootstrap_pixi() { # .bin/pixi from the pinned release (no-op when present)
+  if [ -x "$BOXT_PIXI" ]; then return 0; fi
+  triple=$(host_triple)
+  ext=tar.gz; case "$triple" in *pc-windows-msvc) ext=zip ;; esac
+  url="https://github.com/prefix-dev/pixi/releases/download/$PIXI_VERSION/pixi-$triple.$ext"
+  want=$(pixi_sha256 "$triple")
+  echo "[tinyusb-box] bootstrapping pixi $PIXI_VERSION from $url"
+  if [ "${BOXT_DRY_RUN:-0}" = 1 ]; then echo "+ curl $url -> $BOXT_PIXI (sha256 $want)"; return 0; fi
+  [ -n "$want" ] || { echo "tinyusb-box: no pinned pixi checksum for $triple" >&2; exit 1; }
+  mkdir -p "$ROOT/.bin"
+  archive="$ROOT/.bin/pixi.$ext"
+  download "$url" "$archive"
+  got=$(sha256_of "$archive")
+  if [ "$want" != "$got" ]; then
+    echo "tinyusb-box: pixi checksum mismatch ($got != $want); kept $archive for inspection" >&2
+    exit 1
+  fi
+  if [ "$ext" = zip ]; then unzip -o -q "$archive" pixi.exe -d "$ROOT/.bin" && mv "$ROOT/.bin/pixi.exe" "$BOXT_PIXI.part"
+  else tar -xzf "$archive" -C "$ROOT/.bin" pixi && mv "$ROOT/.bin/pixi" "$BOXT_PIXI.part"; fi
+  chmod +x "$BOXT_PIXI.part" && mv "$BOXT_PIXI.part" "$BOXT_PIXI"
+}
+
+# Dry run is a global flag: ./tinyusb-box --dry-run <command> ...
+if [ "${1:-}" = --dry-run ] || [ "${1:-}" = -n ]; then
+  export BOXT_DRY_RUN=1
+  shift
+fi
+command -v bash >/dev/null 2>&1 || { echo "tinyusb-box: bash is required" >&2; exit 1; }
+case "${1:-help}" in
+  bootstrap|install|relocate) bootstrap_pixi ;;
+  *) ;;   # every other command works without pixi or reports it missing
+esac
+exec bash "$ROOT/lib/tinyusb.bash" "$@"

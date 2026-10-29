@@ -1,0 +1,19 @@
+# 32_21_tinyusb pixi env (managed by ./tinyusb-box, see README.md). conda-forge only, pinned by
+# pixi.lock; env in ./.pixi, package caches in ./cache. Build tools for TinyUSB's CMake examples
+# (CMake, Ninja, make, Python for pico-sdk's boot2 checksum script), Ruby + host GCC for Ceedling (TinyUSB's
+# host unit tests; the ceedling gem itself is pinned in lib/tinyusb.bash, GEM_HOME inside the ID).
+# Compilers and SDKs come from pinned tarballs (config/pins.tsv): xPack arm-none-eabi-gcc,
+# TinyUSB, ST CMSIS/HAL, CMSIS_5, pico-sdk, picotool, pioasm.
+[workspace]
+name = "tinyusb_box"
+channels = ["conda-forge"]
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
+
+[dependencies]
+python = "3.12.*"
+cmake = "4.*"
+ninja = "*"
+make = "4.*"
+ruby = "3.4.*"
+# host C compiler for the Ceedling unit tests (instead of the OS gcc)
+c-compiler = "*"
